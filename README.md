@@ -48,7 +48,9 @@ This is probably the most complicated step. Here I first apply the [Hough Transf
 *   Max Line Length: 150
 
 Initially I was using lower values for the Max Line Length, but increasing it to a higher value improved the line detection as it was able to "connect" the dashed white lane markings. Bellow is the output of the raw lines detected plotted onto the original image.
+ 
  ![](https://blognicholasandre.files.wordpress.com/2017/12/raw_lines_img.png?w=300) 
+ 
  As you can see it detects multiples lines for each lane markings. So we need a way to average these lines. The idea is to find two lines, one for the left lane and another for the right lane. So the first step is to separate the lines found. The way we can do that is by computing the slope of the line:
 
 *   If slope is positive (as y decreases, x decreases as well), the line belongs to the right lane.
