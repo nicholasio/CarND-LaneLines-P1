@@ -1,4 +1,4 @@
-You can also check this out on my [blog]( http://blog.nicholasandre.com.br/2017/12/22/finding-lane-lin…-computer-vision/).
+## You can also check this out on my [blog]( http://blog.nicholasandre.com.br/2017/12/22/finding-lane-lin…-computer-vision/).
 
 ### Overview of the pipeline
 
@@ -16,7 +16,13 @@ Before digging into each step taken, let me summarize what I'm doing in order to
 
 ### Pre-processing the image
 
-The first three steps does some pre-processing to the image that will make our life easier in the next steps. First I convert the image color space from RGB to HSL, this gives us slightly better results for color thresholding compared to RGB. HSL is just another model for representing colors. There are several image color models such as RGB, YUV, YCrCb, CMYK, I'm not gonna dive into details of color representation but you can think of them as different ways to represent colors in images. It's also important to note that there are equations that can convert colors from one representation to another. If you're interest in reading more check out this Wikipedia [article](https://en.wikipedia.org/wiki/Color_model). in OpenCV converting color models is as simple as calling a function: \[code language="python"\] img = cv2.cvtColor(image,cv2.COLOR_RGB2HLS) \[/code\] Next we apply a technique called color thresholding to select pixels whose color intensity values are between the given color range. For example, if we want to select only white regions of the image, we could look for pixels with RGB values of (255,255,255) since it represents white. However, there are various levels of white and if we only look for the "full" white we would be missing tons of pixels in the image. A better approach is to get pixels withing a given range like (200,200,200) to (255,255,255). The sequence of images below shows the result of applying two color masks to get yellow and white lane markings. The last image is the two masked combined. 
+The first three steps does some pre-processing to the image that will make our life easier in the next steps. First I convert the image color space from RGB to HSL, this gives us slightly better results for color thresholding compared to RGB. HSL is just another model for representing colors. There are several image color models such as RGB, YUV, YCrCb, CMYK, I'm not gonna dive into details of color representation but you can think of them as different ways to represent colors in images. It's also important to note that there are equations that can convert colors from one representation to another. If you're interest in reading more check out this Wikipedia [article](https://en.wikipedia.org/wiki/Color_model). in OpenCV converting color models is as simple as calling a function:
+
+```
+img = cv2.cvtColor(image,cv2.COLOR_RGB2HLS) 
+```
+
+Next we apply a technique called color thresholding to select pixels whose color intensity values are between the given color range. For example, if we want to select only white regions of the image, we could look for pixels with RGB values of (255,255,255) since it represents white. However, there are various levels of white and if we only look for the "full" white we would be missing tons of pixels in the image. A better approach is to get pixels withing a given range like (200,200,200) to (255,255,255). The sequence of images below shows the result of applying two color masks to get yellow and white lane markings. The last image is the two masked combined. 
 
 ![](https://blognicholasandre.files.wordpress.com/2017/12/color_maks.png?w=700) 
 
@@ -56,10 +62,7 @@ Video 1: https://cldup.com/4BVokJbvKf.mp4
 
 Video 2: https://cldup.com/OTj4_SA0sR.mp4
 
-Video 3: 
-This video is more challenging because it more curves. Since we're only using straight lines the solution does not perform very well, but it is still able to detect the lane lines.
-
-https://cldup.com/_D0bXsmr1Q.mp4
+Video 3: https://cldup.com/_D0bXsmr1Q.mp4
 
 Areas to improve
 ----------------
