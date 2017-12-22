@@ -1,56 +1,51 @@
-# **Finding Lane Lines on the Road** 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
+I recently joined the Udacity [Self Driving Car Nanodegree](https://www.google.com.br/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwj4krnB4p3YAhUFjZAKHcKYBWIQFggwMAA&url=https%3A%2F%2Fwww.udacity.com%2Fcourse%2Fself-driving-car-engineer-nanodegree--nd013&usg=AOvVaw2uaM9n2beuYSiTnL1Sh6sT). The nanodegree is amazing and I'm really enjoying taking it. The nanodegree is comprised of several projects and the first project (and the simplest one) is to build a pipeline to identify lanes on a road. Here I'm gonna present my solution to this project. The code is written in Python and I'm using the [OpenCV](https://opencv.org/) library. Identifying lane lines is a common and simple task that self driving cars need to perform. There are a bunch of techniques out there. Since this is the first project, we're suppose to build a more simpler approach. Our goal here is to identify straight lines in order to "fit" left and right lane markings. This approach works well when a car is driving straight but it starts to perform badly on curves (and you'll see an example of this at the end of this article).
 
-<img src="examples/laneLines_thirdPass.jpg" width="480" alt="Combined Image" />
+### Overview of the pipeline
 
-Overview
----
+Before digging into each step taken, let me summarize what I'm doing in order to identify the lanes markings.
 
-When we drive, we use our eyes to decide where to go.  The lines on the road that show us where the lanes are act as our constant reference for where to steer the vehicle.  Naturally, one of the first things we would like to do in developing a self-driving car is to automatically detect lane lines using an algorithm.
+1.  Convert Images to HSL
+2.  Apply a white and yellow color masks to the image
+3.  Apply a Gaussian filter
+4.  Run Canny Edges detection to identify the edges
+5.  Get the image ROI (region of interest) to focus on the road
+6.  Run Hough Transform to find lines in the image
+7.  Separate lines into left and right lines
+8.  Find the best fit line for the left and right line points
+9.  Extrapolate the lines in order to get one single line that cover the entire lane line
 
-In this project you will detect lane lines in images using Python and OpenCV.  OpenCV means "Open-Source Computer Vision", which is a package that has many useful tools for analyzing images.  
+### Pre-processing the image
 
-To complete the project, two files will be submitted: a file containing project code and a file containing a brief write up explaining your solution. We have included template files to be used both for the [code](https://github.com/udacity/CarND-LaneLines-P1/blob/master/P1.ipynb) and the [writeup](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md).The code file is called P1.ipynb and the writeup template is writeup_template.md 
+The first three steps does some pre-processing to the image that will make our life easier in the next steps. First I convert the image color space from RGB to HSL, this gives us slightly better results for color thresholding compared to RGB. HSL is just another model for representing colors. There are several image color models such as RGB, YUV, YCrCb, CMYK, I'm not gonna dive into details of color representation but you can think of them as different ways to represent colors in images. It's also important to note that there are equations that can convert colors from one representation to another. If you're interest in reading more check out this Wikipedia [article](https://en.wikipedia.org/wiki/Color_model). in OpenCV converting color models is as simple as calling a function: \[code language="python"\] img = cv2.cvtColor(image,cv2.COLOR_RGB2HLS) \[/code\] Next we apply a technique called color thresholding to select pixels whose color intensity values are between the given color range. For example, if we want to select only white regions of the image, we could look for pixels with RGB values of (255,255,255) since it represents white. However, there are various levels of white and if we only look for the "full" white we would be missing tons of pixels in the image. A better approach is to get pixels withing a given range like (200,200,200) to (255,255,255). The sequence of images below shows the result of applying two color masks to get yellow and white lane markings. The last image is the two masked combined. ![](https://blognicholasandre.files.wordpress.com/2017/12/color_maks.png?w=700) I then use the combined mask to get only the pixels of interest in the original image. The image on the left is the result after applying the Gaussian filter which basically blurs the image. The goal of applying the Gaussian filter is to remove noise and avoid noisy edges to be detected. Compare the images below, you should be able to see that noisy pixels around the lane markings have been smoothed out. ![](https://blognicholasandre.files.wordpress.com/2017/12/pixels_of_interest_and_gaussian.png?w=700)
 
-To meet specifications in the project, take a look at the requirements in the [project rubric](https://review.udacity.com/#!/rubrics/322/view)
+### Finding the edges
 
+Now that I have filtered out most of the pixels of the image that I'm not interest in, I run the canny edge detection algorithm. Basically it uses the gradient of the image with a low and high threshold parameters to find edges. If you're interest in learning more about Canny Edge check out this [link](http://aishack.in/tutorials/canny-edge-detector/). I used 50 and 150 for the low and high threshold respectively. ![](https://blognicholasandre.files.wordpress.com/2017/12/canny.png) The canny edge algorithm returns a binary image with white pixels belonging to the edges the algorithm detected. There are still some unwanted edges found in the image, but since the camera is always in a fixed position we can simply define a region of interest and discard everything outside this region. ![](https://blognicholasandre.files.wordpress.com/2017/12/roi.png?w=700) Cool! with a region of interest I got only pixels belonging to the lane markings! The next steps is to find actual line points from this image.
 
-Creating a Great Writeup
----
-For this project, a great writeup should provide a detailed response to the "Reflection" section of the [project rubric](https://review.udacity.com/#!/rubrics/322/view). There are three parts to the reflection:
+### Hough Transform and extrapolating lines
 
-1. Describe the pipeline
+This is probably the most complicated step. Here I first apply the [Hough Transform](https://docs.opencv.org/2.4/doc/tutorials/imgproc/imgtrans/hough_lines/hough_lines.html) Algorithm. Basically, it receives the output of any edge detection algorithms such as canny edges and tries to find lines. The algorithm is a bit complex but the way it works is beautiful! Check out this [article](https://alyssaq.github.io/2014/understanding-hough-transform/) if you're interest in learning how to implement it. For applying the Hough Transform I decided to use following parameters:
 
-2. Identify any shortcomings
+*   Rho: 1
+*   Theta: PI/180
+*   Threshold: 30
+*   Min Line Length: 10
+*   Max Line Length: 150
 
-3. Suggest possible improvements
+Initially I was using lower values for the Max Line Length, but increasing it to a higher value improved the line detection as it was able to "connect" the dashed white lane markings. Bellow is the output of the raw lines detected plotted onto the original image. ![](https://blognicholasandre.files.wordpress.com/2017/12/raw_lines_img.png?w=300) As you can see it detects multiples lines for each lane markings. So we need a way to average these lines. The idea is to find two lines, one for the left lane and another for the right lane. So the first step is to separate the lines found. The way we can do that is by computing the slope of the line:
 
-We encourage using images in your writeup to demonstrate how your pipeline works.  
+*   If slope is positive (as y decreases, x decreases as well), the line belongs to the right lane.
+*   If the slope is negative (as y decrease, x increases), the line belongs to the left lane.
 
-All that said, please be concise!  We're not looking for you to write a book here: just a brief description.
+Once the lines are properly grouped, I use line the points to find a best fit line using the least square method. In python it's possible to easily calculate that by using [np.polyfit()](https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.polyfit.html). This function will return the coeficientes of the line equation (y = ax + b). With this equation I can easily plot a line from the bottom the of region of interest to the top of it. The image below shows the final output of the pipeline, previous steps are also shown for better understanding. ![](https://blognicholasandre.files.wordpress.com/2017/12/test1.png?w=700)
 
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup. Here is a link to a [writeup template file](https://github.com/udacity/CarND-LaneLines-P1/blob/master/writeup_template.md). 
+### Tests on videos
 
+Video 1 \[embed\]https://cldup.com/4BVokJbvKf.mp4\[/embed\] Video 2 \[embed\]https://cldup.com/OTj4\_SA0sR.mp4\[/embed\] Video 3 This video is more challenging because it more curves. Since we're only using straight lines the solution does not perform very well, but it is still able to detect the lane lines. \[embed\]https://cldup.com/\_D0bXsmr1Q.mp4\[/embed\]
 
-The Project
----
+Areas to improve
+----------------
 
-## If you have already installed the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) you should be good to go!   If not, you should install the starter kit to get started on this project. ##
-
-**Step 1:** Set up the [CarND Term1 Starter Kit](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/83ec35ee-1e02-48a5-bdb7-d244bd47c2dc/lessons/8c82408b-a217-4d09-b81d-1bda4c6380ef/concepts/4f1870e0-3849-43e4-b670-12e6f2d4b7a7) if you haven't already.
-
-**Step 2:** Open the code in a Jupyter Notebook
-
-You will complete the project code in a Jupyter notebook.  If you are unfamiliar with Jupyter Notebooks, check out <A HREF="https://www.packtpub.com/books/content/basics-jupyter-notebook-and-python" target="_blank">Cyrille Rossant's Basics of Jupyter Notebook and Python</A> to get started.
-
-Jupyter is an Ipython notebook where you can run blocks of code and see results interactively.  All the code for this project is contained in a Jupyter notebook. To start Jupyter in your browser, use terminal to navigate to your project directory and then run the following command at the terminal prompt (be sure you've activated your Python 3 carnd-term1 environment as described in the [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) installation instructions!):
-
-`> jupyter notebook`
-
-A browser window will appear showing the contents of the current directory.  Click on the file called "P1.ipynb".  Another browser window will appear displaying the notebook.  Follow the instructions in the notebook to complete the project.  
-
-**Step 3:** Complete the project and submit both the Ipython notebook and the project writeup
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
-
+*   Straight Lines aren't able to detect lane lines properly in curves. One potential solution is to use quadratic functions to fit the lane markings.
+*   The current pipeline always assume that lane markings are either yellow or white. By parameter tuning it should be possible to completely get rid of color masks and use only edge detection.
+*   Use some sort of memory to average the current line with previous lines in order to make the detected lines more stable.
